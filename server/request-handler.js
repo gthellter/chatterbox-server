@@ -1,3 +1,4 @@
+const fs = require('fs');
 /*************************************************************
 
 You should implement your request handler function in this file.
@@ -8,9 +9,13 @@ in basic-server.js, but it won't work as is.
 You'll have to figure out a way to export this function from
 this file and include it in basic-server.js so that it actually works.
 
+ie. exports.requestHandler = requestHandler;
+
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
+//Messages Storage
+var messages = [{text: "Welcome", username: "main", roomname: "Lobby", message_id: new Date(), createdAt: new Date()}];
 
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
@@ -27,7 +32,7 @@ var requestHandler = function(request, response) {
   // Adding more logging to your server can be an easy way to get passive
   // debugging help, but you should always be careful about leaving stray
   // console.logs in your code.
-  console.log('Serving request type ' + request.method + ' for url ' + request.url);
+
 
   // The outgoing status.
   var statusCode = 200;
@@ -39,11 +44,52 @@ var requestHandler = function(request, response) {
   //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
-  headers['Content-Type'] = 'text/plain';
+  headers['Content-Type'] = 'application/json';
+
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
   response.writeHead(statusCode, headers);
+
+  if(request.url === '/classes/messages') {
+    if(request.method === 'POST') {
+      let message = [];
+      request.on('data', (chunk) => {
+        message.push(chunk);
+      }).on('end', () => {
+        message = Buffer.concat(message).toString();
+        message = JSON.parse(message);
+        message.message_id = new Date();
+        message.createdAt = new Date();
+        console.log(message);
+        messages.unshift(message);
+        response.writeHead(201, headers);
+        response.end(JSON.stringify(messages));
+      });
+      return;
+      } else if(request.method === 'GET') {
+        response.writeHead(200, headers);
+        return response.end(JSON.stringify(messages));
+      } else if(request.method === 'OPTIONS') {
+        response.writeHead(200, headers);
+        return response.end(JSON.stringify(messages));
+      } else if(request.method === "DELETE") {
+        messages.shift();
+        response.writeHead(202, headers);
+        response.end(JSON.stringify(messages));
+        return;
+      }
+      response.writeHead(404, headers);
+      response.end();
+      return;
+    } else {
+      response.writeHead(404, headers);
+      response.end();
+      return;
+    }
+
+
+
 
   // Make sure to always call response.end() - Node may not send
   // anything back to the client until you do. The string you pass to
@@ -52,8 +98,11 @@ var requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  response.end('Hello, World!');
+
+
+  response.end(JSON.stringify(['Hello, World!']));
 };
+
 
 // These headers will allow Cross-Origin Resource Sharing (CORS).
 // This code allows this server to talk to websites that
@@ -70,3 +119,5 @@ var defaultCorsHeaders = {
   'access-control-allow-headers': 'content-type, accept, authorization',
   'access-control-max-age': 10 // Seconds.
 };
+
+module.exports.requestHandler = requestHandler;
